@@ -197,10 +197,10 @@ Label.prototype.toString = function() {
 
 // bool subsumes(Label other, optional Privilege priv)
 Label.prototype.subsumes = function(other, priv) {
-  assert.ok(Label.isLabel(other),"Expeected Label");
+  assert.ok(Label.isLabel(other),"Expected Label");
 
   if (priv) {
-    assert.ok(Privilege.isPrivilege(priv),"Expeected Privilege");
+    assert.ok(Privilege.isPrivilege(priv),"Expected Privilege");
     var this_ = new Label(this_);
     this_.and(priv._label);
     return this_.subsumes(other);
