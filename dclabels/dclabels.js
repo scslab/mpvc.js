@@ -20,8 +20,8 @@ function deepFreeze (o) {
   Object.freeze(o);
   for (propKey in o) {
     prop = o[propKey];
-    if (!o.hasOwnProperty(propKey)  || 
-        !(typeof prop === "object") || 
+    if ((!o.hasOwnProperty(propKey)) || 
+        typeof prop !== "object"     || 
         Object.isFrozen(prop)) {
       continue;
     }
@@ -46,7 +46,7 @@ function Group(ps) {
 
 // Returns true if the argument is a Group
 Group.isGroup = function(group) {
-  return group instanceof Group
+  return group instanceof Group;
 };
 
 // Group or(String or [String] or Group)
@@ -54,9 +54,8 @@ Group.prototype.or = function(ps) {
   function _or(principal) {
     assert.ok(isString(principal), "Expected non-empty String");
 
-    if (this._principals.indexOf(principal) === -1) {
-      this._principals.push(principal)
-    }
+    if (this._principals.indexOf(principal) === -1)
+      this._principals.push(principal);
   }
 
   if (isString(ps)) {
@@ -82,7 +81,7 @@ Group.prototype.toString = function() {
        str += ").or(";
      }
   });
-  str += ")"
+  str += ")";
   return str;
 };
 
@@ -116,7 +115,7 @@ function Label(gs) {
 
 // Returns true if the argument is a Label
 Label.isLabel = function(label) {
-  return label instanceof Label
+  return label instanceof Label;
 };
 
 // Label and(String or Group or [Group] or Label)
@@ -187,7 +186,7 @@ Label.prototype.toString = function() {
        str += ").and(";
      }
   });
-  str += ")"
+  str += ")";
   return str;
 };
 
@@ -207,11 +206,53 @@ Label.prototype.subsumes = function(other) {
 
 // ====================================================================
 
+// PRIVILEGES =========================================================
+
+// Privilege(Label))
+function Privilege(l) {
+  if (!Privilege.isPrivilege(this))
+    return new Privilege(l);
+
+  l = l || new Label();
+  assert.ok(Label.isLabel(l),"Expected Label");
+  this._label = l;
+  Object.seal(this);
+}
+
+// Privilege combine(Privilege)
+Privilege.prototype.combine = function(priv) {
+  assert.ok(Privilege.isPrivilege(priv),"Expected Privilege");
+  this._label.and(priv._label);
+  return this;
+};
+
+// Returns true if the argument is a Privilege
+Privilege.isPrivilege = function(priv) {
+  return priv instanceof Privilege;
+};
+
+Privilege.prototype.toString = function() {
+  return "Privilege("+this._label+")";
+};
+
+// bool subsumes(Privilege other)
+Privilege.prototype.subsumes = function(other) {
+  return this._label.subsumes(other._label);
+};
+
+// Privilege freeze()
+Privilege.prototype.freeze = function() {
+  deepFreeze(this);
+  return this;
+};
+
+// ====================================================================
 
 
 // EXPORTS ============================================================
 
 exports.Group = deepFreeze(Object.freeze(Group));
 exports.Label = deepFreeze(Object.freeze(Label));
+exports.Privilege = deepFreeze(Object.freeze(Privilege));
 
 })();
