@@ -97,6 +97,11 @@ Group.prototype.subsumes = function(other) {
   });
 };
 
+// bool equals(Group other)
+Group.prototype.equals = function(other) {
+  return this === other || (this.subsumes(other) && other.subsumes(this));
+};
+
 // ====================================================================
 
 
@@ -190,18 +195,31 @@ Label.prototype.toString = function() {
   return str;
 };
 
-// bool subsumes(Label other)
-Label.prototype.subsumes = function(other) {
+// bool subsumes(Label other, optional Privilege priv)
+Label.prototype.subsumes = function(other, priv) {
   assert.ok(Label.isLabel(other),"Expeected Label");
-  // there are more groups in the other formula, this label cannot subsumes it
-  if (other._groups.length > this._groups.length)
-    return false;
-  // the other label has a group that no group in this label subsumes
-  return other._groups.every(function(group) {
-    return this._groups.some(function(tgroup) { 
-              return tgroup.subsumes(group);
-            });
-  }, this);
+
+  if (priv) {
+    assert.ok(Privilege.isPrivilege(priv),"Expeected Privilege");
+    var this_ = new Label(this_);
+    this_.and(priv._label);
+    return this_.subsumes(other);
+  } else {
+    // there are more groups in the other formula, this label cannot subsumes it
+    if (other._groups.length > this._groups.length)
+      return false;
+    // the other label has a group that no group in this label subsumes
+    return other._groups.every(function(group) {
+      return this._groups.some(function(tgroup) { 
+                return tgroup.subsumes(group);
+              });
+    }, this);
+  }
+};
+
+// bool equals(Label other)
+Label.prototype.equals = function(other) {
+  return this === other || (this.subsumes(other) && other.subsumes(this));
 };
 
 // ====================================================================
@@ -238,6 +256,11 @@ Privilege.prototype.toString = function() {
 // bool subsumes(Privilege other)
 Privilege.prototype.subsumes = function(other) {
   return this._label.subsumes(other._label);
+};
+
+// bool equals(Privilege other)
+Privilege.prototype.equals = function(other) {
+  return this === other || (this.subsumes(other) && other.subsumes(this));
 };
 
 // Privilege freeze()
