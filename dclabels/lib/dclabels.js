@@ -2,36 +2,6 @@
 "use strict";
 var assert = require('assert');
 
-// HELPER FUNCTIONS ===================================================
-
-// Returns true if the argument is a non-empty string
-function isString(str) {
-  return str && typeof(str) === 'string';
-}
-
-// Returns true if the argument is a non-empty array
-function isArray(ps) {
-  return Array.isArray(ps) && ps.length > 0;
-}
-
-// Deep freeze an object and return it; from Object.freeze on MDN 
-function deepFreeze (o) {
-  var prop, propKey;
-  Object.freeze(o);
-  for (propKey in o) {
-    prop = o[propKey];
-    if ((!o.hasOwnProperty(propKey)) || 
-        typeof prop !== "object"     || 
-        Object.isFrozen(prop)) {
-      continue;
-    }
-    deepFreeze(prop); // Recursively call deepFreeze.
-  }
-  return o;
-}
-
-// ====================================================================
-
 // GROUPS =============================================================
 
 // Group(String or [String] or Group) 
@@ -271,6 +241,36 @@ Privilege.prototype.freeze = function() {
 
 // ====================================================================
 
+
+// HELPER FUNCTIONS ===================================================
+
+// Returns true if the argument is a non-empty string
+function isString(str) {
+  return str && typeof(str) === 'string';
+}
+
+// Returns true if the argument is a non-empty array
+function isArray(ps) {
+  return Array.isArray(ps) && ps.length > 0;
+}
+
+// Deep freeze an object and return it; from Object.freeze on MDN 
+function deepFreeze (o) {
+  var prop, propKey;
+  Object.freeze(o);
+  for (propKey in o) {
+    prop = o[propKey];
+    if ((!o.hasOwnProperty(propKey)) || 
+        typeof prop !== "object"     || 
+        Object.isFrozen(prop)) {
+      continue;
+    }
+    deepFreeze(prop); // Recursively call deepFreeze.
+  }
+  return o;
+}
+
+// ====================================================================
 
 // EXPORTS ============================================================
 

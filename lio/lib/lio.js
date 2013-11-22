@@ -1,6 +1,7 @@
 (function() {
 "use strict";
 var assert = require('assert');
+var clone = require('clone');
 
 // DC labels:
 var dclabel   = require('../../dclabels');
@@ -22,13 +23,7 @@ Object.defineProperty(exports,"privacyLabel",
   });
 
 function setPrivacyLabel(lnew, privs) {
-  assert.ok(lnew.subsumes(privacyLabel, privs), 
-            "Existing label "+lnew+" is not subsumed by label "+lnew);
-
-  if (privacyClearance)
-    assert.ok(privacyClearance.subsumes(lnew),
-              "Clearance "+privacyClearance+" does not subsume label "+lnew);
-
+  guardAllocPrivacy(lnew, privs);
   privacyLabel = lnew;
 }
 
@@ -44,18 +39,14 @@ Object.defineProperty(exports,"trustLabel",
   });
 
 function setTrustLabel(lnew, privs) {
-  assert.ok(trustLabel.subsumes(lnew, privs), 
-            "Existing label "+trustLabel+" does not subsume label "+lnew);
-
-  if (trustClearance)
-    assert.ok(lnew.subsumes(trustClearance),
-              "Label "+lnew+" does not subsume clearance "+trustClearance);
-
+  guardAllocTrust(lnew, privs);
   trustLabel = lnew;
 }
 // ====================================================================
 
 // CURRENT CLEARANCE ==================================================
+
+// privacy:
 
 var privacyClearance = null;
 
@@ -68,7 +59,8 @@ Object.defineProperty(exports,"privacyClearance",
 
 function setPrivacyClearance(lnew, privs) {
   assert.ok(privacyClearance.subsumes(lnew, privs), 
-            "Existing clearance "+privacyClearance+" does not subsume clearance "+lnew);
+            "Existing clearance "+privacyClearance+
+            " does not subsume clearance "+lnew);
 
   assert.ok(lnew.subsumes(privacyLabel),
             "Label "+lnew+" does not subsume clearnace "+privacyLabel);
@@ -76,6 +68,7 @@ function setPrivacyClearance(lnew, privs) {
   privacyClearance = lnew;
 }
 
+// trust:
 
 var trustClearance = null;
 
@@ -88,7 +81,8 @@ Object.defineProperty(exports,"trustClearance",
 
 function setTrustClearance(lnew, privs) {
   assert.ok(lnew.subsumes(trustClearance, privs), 
-            "Existing clearance "+trustClearance+" is not subsumed by clearance "+lnew);
+            "Existing clearance "+trustClearance+
+            " is not subsumed by clearance "+lnew);
 
   assert.ok(trustLabel.subsumes(lnew),
             "Label "+trustLabel+" does not subsume clearnace "+lnew);
@@ -98,7 +92,95 @@ function setTrustClearance(lnew, privs) {
 
 // ====================================================================
 
+// LABELED VALUES =====================================================
 
+
+// Labeled Labeled(any, optional { privacy: Label, trust: Label}, Privilege)
+function Labeled(val, opts, privs) {
+  if (!Labeled.isLabeled(this))
+    return new Labeled(val, opts);
+
+  var value = clone(val);
+
+  opts = opts || {};
+
+  // set the privacy label:
+  this.privacy = opts.privacy || privacyLabel;
+  assert.ok(Label.isLabel(this.privacy), "Expected Label");
+  guardAllocPrivacy(this.privacy, privs);
+
+  // set the trust label:
+  this.trust = opts.trust || trustLabel;
+  assert.ok(Label.isLabel(this.trust), "Expected Label");
+  guardAllocTrust(this.trust, privs);
+
+  // Call toString on the value, raising the current label
+  this.toString = function() { 
+    setPrivacyLabel(this.privacy, privs);
+    setTrustLabel(this.trust, privs);
+    return value.toString();
+  }
+
+  // Return the value, raising the current label
+  this.valueOf = function() { 
+    setPrivacyLabel(this.privacy, privs);
+    setTrustLabel(this.trust, privs);
+    return value;
+  };
+
+  deepFreeze(this);
+}
+
+Labeled.isLabeled = function(lobj) {
+  return lobj instanceof Labeled;
+};
+
+// ====================================================================
+
+// GUARDS =============================================================
+
+// Throws an exception if the object label is not between the current
+// label and clearance, taking privs into consideration.
+function guardAllocPrivacy(lobj, privs) {
+  assert.ok(lobj.subsumes(privacyLabel, privs), 
+            "Existing label "+lobj+" is not subsumed by label "+lobj);
+
+  if (privacyClearance)
+    assert.ok(privacyClearance.subsumes(lobj),
+              "Clearance "+privacyClearance+" does not subsume label "+lobj);
+}
+
+// Throws an exception if the object label is not between the current
+// label and clearance, taking privs into consideration.
+function guardAllocTrust(lobj, privs) {
+  assert.ok(trustLabel.subsumes(lobj, privs), 
+            "Existing label "+trustLabel+
+            " does not subsume label "+lobj);
+  if (trustClearance)
+    assert.ok(lobj.subsumes(trustClearance),
+              "Label "+lobj+" does not subsume clearance "+trustClearance);
+}
+
+
+// HELPER FUNCTIONS ===================================================
+
+// Deep freeze an object and return it; from Object.freeze on MDN 
+function deepFreeze (o) {
+  var prop, propKey;
+  Object.freeze(o);
+  for (propKey in o) {
+    prop = o[propKey];
+    if ((!o.hasOwnProperty(propKey)) || 
+        typeof prop !== "object"     || 
+        Object.isFrozen(prop)) {
+      continue;
+    }
+    deepFreeze(prop); // Recursively call deepFreeze.
+  }
+  return o;
+}
+
+// ====================================================================
 
 // EXPORTS ============================================================
 
@@ -111,5 +193,7 @@ exports.setTrustClearance = setTrustClearance;
 exports.Group = Group;
 exports.Label = Label;
 exports.Privilege = Privilege;
+
+exports.Labeled = Labeled;
 
 })();
